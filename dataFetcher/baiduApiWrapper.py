@@ -6,18 +6,16 @@ import numpy as np
 from tqdm import tqdm
 
 class BaiduAPIWrapper(object):
-    def __init__(self):
-        API_KEY = 'YOUR_API_KEY'
-        SECRET_KEY = 'YOUR_SECRET_KEY'
+    def __init__(self, API_KEY, SECRET_KEY):
         self.APIURL = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=%s&client_secret=%s' % (
         API_KEY, SECRET_KEY)
 
-    def extract_addresses_from_data(self, path="latest_data.npy"):
+    def extract_addresses_from_data(self, cache_path):
         '''
         Process address in weibo data by querying Baidu api
         '''
 
-        data = np.load(path, allow_pickle=True)[()]
+        data = np.load(cache_path+".npy", allow_pickle=True)[()]
         data_ids = data.keys()
         cnt = 0
         for id in tqdm(data_ids):
@@ -29,7 +27,7 @@ class BaiduAPIWrapper(object):
                 data[id]['location'] = address_query['location']
                 cnt += 1
         print("Query %d info"%cnt)
-        np.save("latest_data", data)
+        np.save(cache_path, data)
 
 
     def preprocess_text(self, content):
