@@ -2,8 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.npy
 *.csv
+*.old
 
 # C extensions
 *.so
@@ -27,6 +27,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+dataFetcher/run.txt
 MANIFEST
 
 # PyInstaller
