@@ -22,7 +22,12 @@ CHN_COL_TO_ENG = {
     '是否为有效信息': 'valid_info',
     '审核人': "reviewer",
     '经纬度已人工矫正': "is_corrected_latlong",
-    '勿动_机器分类_有效': 'machine_valid_classification'
+    '勿动_机器分类_有效': 'machine_valid_classification',
+    '联系人': 'contact_person',
+    '联系方式': 'contact_info',
+    '信息来源地址': 'source_info',
+    '内容': 'post',
+    '链接': 'link'
 }
 
 APP_ID = 'YOUR_APP_ID'
@@ -185,7 +190,7 @@ class FeishuSyncer(object):
 
 
 if __name__ == "__main__":
-    syncer = FeishuSyncer('cli_a070f17f87f8d00d', '41O0BHNSZE33JMTYVMP7cgLKPhvRUWAq')
+    syncer = FeishuSyncer()
     syncer.get_sheet_meta_data()
     syncer.read_sheet_data()
 #     print(syncer.title_cols)
