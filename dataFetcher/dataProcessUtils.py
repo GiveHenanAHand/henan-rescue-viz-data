@@ -78,18 +78,20 @@ def data_link_valid(cache_path):
         if not '404' in data[id]:
             data[id]['404'] = False
 
-            if data[id]['outdated']:
-                continue
+        continue
 
-            link = data[id]['link']
-            time.sleep(1)
+        if data[id]['outdated']:
+            continue
 
-            try:
-                response = requests.get(link).text
-                d = re.findall("var \$render_data = \[({.*})]\[0]", response, re.DOTALL)[0]
-                d = json.loads(d)['status']
-            except:
-                data[id]['404'] = True
+        link = data[id]['link']
+        time.sleep(1)
+
+        try:
+            response = requests.get(link).text
+            d = re.findall("var \$render_data = \[({.*})]\[0]", response, re.DOTALL)[0]
+            d = json.loads(d)['status']
+        except:
+            data[id]['404'] = True
 
     np.save(cache_path, data)
 
@@ -176,7 +178,7 @@ def data_export_csv(cache_path, to_fname='final.csv'):
 
     with open(to_fname, 'w', newline='', encoding='utf-8') as f:
         f_csv = csv.writer(f)
-        f_csv.writerow(['微博链接', '时间', '地址', '经度', '纬度', '微博内容', '已过期/已删除', '是否紧急'])
+        f_csv.writerow(['微博链接', '时间', '地址', '经度', '纬度', '微博内容', '已过期或已删除', '勿动_机器分类_有效'])
         for addr in Address.keys():
             content = Address[addr]
             content.sort()
@@ -184,8 +186,9 @@ def data_export_csv(cache_path, to_fname='final.csv'):
                 useless = '否'
                 if r or o:
                     useless = '是'
-                urgent = '是'
+                urgent = '有效'
                 if u == False:
-                    urgent = '否'
+                    urgent = '无效'
+                print(u, urgent)
                 f_csv.writerow([l, t, addr, location['lng'], location['lat'], p, useless, urgent])
 

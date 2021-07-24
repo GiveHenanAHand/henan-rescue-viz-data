@@ -19,7 +19,7 @@ def fetch_n_export(args):
     Weibo_Fetcher = WeiboDataFetcher()
     Api_Wrapper = BaiduAPIWrapper(args.api_key, args.api_secret)
 
-    for i in tqdm(range(1)):
+    for i in tqdm(range(50)):
         Weibo_Fetcher.fetch_weibo_data(args.cache, "河南暴雨互助", page=i, stop_if_repeat=False)
         Api_Wrapper.extract_addresses_from_data(args.cache)
 
@@ -36,4 +36,3 @@ if __name__ == "__main__":
         backup_if_exist(args.cache)
         backup_if_exist(args.output)
         fetch_n_export(args)
-        break
