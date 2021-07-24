@@ -129,19 +129,13 @@ def data_export_csv(cache_path, to_fname='final.csv'):
 
     with open(to_fname, 'w', newline='', encoding='utf-8') as f:
         f_csv = csv.writer(f)
-        f_csv.writerow(['微博链接', '时间', '地址', '经度', '纬度', '微博内容', '已删除', '已过期'])
+        f_csv.writerow(['微博链接', '时间', '地址', '经度', '纬度', '微博内容', '已删除/已过期'])
         for addr in Address.keys():
             content = Address[addr]
             content.sort()
             for t, l, p, location, remove, outdated in content:
-                if remove == False:
-                    remove = ''
-                else:
-                    remove = '是'
-
-                if outdated == False:
-                    outdated = ''
-                else:
-                    outdated = '是'
-                f_csv.writerow([l, t, addr, location['lng'], location['lat'], p, remove, outdated])
+                useless = ''
+                if remove or outdated:
+                    useless = '是'
+                f_csv.writerow([l, t, addr, location['lng'], location['lat'], p, useless])
 
