@@ -139,6 +139,7 @@ class FeishuSyncer(object):
             if column_name not in scrapedCSV:
                 scrapedCSV[column_name] = ""
         self.scraped_csv = scrapedCSV
+        print('[Feishu Syncer Info] Total scraped %d rows' % self.scraped_csv.shape[0])
 
     def compare_Feishu_n_localFile(self, saveResPath='combined.json'):
         #Get newly scraped rows that's not in the Feishu doc
