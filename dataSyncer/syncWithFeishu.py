@@ -185,7 +185,7 @@ class FeishuSyncer(object):
 
 
 if __name__ == "__main__":
-    syncer = FeishuSyncer('cli_a070f17f87f8d00d', '41O0BHNSZE33JMTYVMP7cgLKPhvRUWAq')
+    syncer = FeishuSyncer()
     syncer.get_sheet_meta_data()
     syncer.read_sheet_data()
 #     print(syncer.title_cols)
