@@ -33,7 +33,6 @@ def fetch_n_export(args):
     data_date_valid(args.cache)
     data_link_valid(args.cache)
     data_content_filter(args.cache)
-    # data_export(args.cache, args.json_output)
     data_export_csv(args.cache, args.csv_output)
     
     feishuSyncer = FeishuSyncer(args.feishu_app_id, args.feishu_app_secret)
