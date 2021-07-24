@@ -9,11 +9,11 @@ import requests
 import numpy as np
 from tqdm import tqdm
 
-def data_content_filter(cache_path):
+def data_content_filter(cache_path, keywords_path='dict.txt'):
     data = np.load(cache_path + ".npy", allow_pickle=True)[()]
     dict_word_calculate = {}
 
-    file = open(r'dict.txt', 'r', encoding='utf-8')
+    file = open(keywords_path, 'r', encoding='utf-8')
 
     lines = file.readlines()
     for line in lines:
@@ -38,7 +38,6 @@ def data_content_filter(cache_path):
                     word_list.append(words)
                     break
 
-        # print(word_list)
         result = 1
         for words in word_list:
             if dict_word_calculate.get(words) != None:
@@ -135,7 +134,7 @@ def data_recover_saved(cache_path, recover_id = '0'):
 
     np.save(cache_path, data)
 
-def data_export(cache_path):
+def data_export(cache_path, output_path):
     '''
     Used to export data for visualization,
     data in json format
@@ -155,7 +154,7 @@ def data_export(cache_path):
                 "post":v['post'], 
                 "link":v["link"]})
 
-    with open("final.json", "w", encoding="utf-8") as fp:
+    with open(output_path, "w", encoding="utf-8") as fp:
         json.dump(news, fp, ensure_ascii=False, indent=4)
 
     print("Export %d info"%len(news))

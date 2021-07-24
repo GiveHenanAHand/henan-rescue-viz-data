@@ -41,13 +41,31 @@ class FeishuSyncer(object):
         self.sheetMetaJson = r.json()
         self.sheetToken = SpreadSheetToken
 
-    def read_sheet_data(self, Nth_sheet=0, startCol='A', stopCol='L', title_cols=DEFAULT_TITLE_COLS):
+    def get_title_columns(self):
+        ranges = "?ranges=%s!%s%d:%s%d" %\
+                    (self.sheetID, 'A', 1, 'Z', 1)
+        BatchGetRangeURL = "https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/%s/values_batch_get" % self.sheetToken + ranges
+        r = requests.get(BatchGetRangeURL, headers=self.HEADER)
+        rjson = r.json()
+        if 'data' not in rjson:
+            raise Exception("[FeishuSyncer Error] Fail to read the first line")
+        title_row = r.json()['data']['valueRanges'][0]['values'][0]
+        self.title_cols = []
+        for key in title_row:
+            if key is not None:
+                self.title_cols.append(key)
+        self.startCol = 'A'
+        self.stopCol = chr(ord('A')+len(self.title_cols)-1)
+
+    def read_sheet_data(self, Nth_sheet=0):
         self.verify_access()
         if Nth_sheet < 0 or Nth_sheet >= len(self.sheetMetaJson["data"]["sheets"]):
             raise Exception("[FeishuSyncer Error] Sheet Index Wrong")
         self.sheetID = self.sheetMetaJson["data"]["sheets"][Nth_sheet]["sheetId"]
 
-        # skip the first line
+        # use the first line as the default titles
+        self.get_title_columns()
+
         # read the rest data
         reading_end = False
         line_per_read = 500
@@ -56,73 +74,75 @@ class FeishuSyncer(object):
         total_rows = starting_line-1
         while not reading_end:
             ranges = "?ranges=%s!%s%d:%s%d" %\
-                    (self.sheetID, startCol, starting_line, stopCol, starting_line+line_per_read)
+                    (self.sheetID, self.startCol, starting_line, self.stopCol, starting_line+line_per_read)
             BatchGetRangeURL = "https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/%s/values_batch_get" % self.sheetToken + ranges                    
             r = requests.get(BatchGetRangeURL, headers=self.HEADER)
             rjson = r.json()
             if 'data' not in rjson:
                 break
             empty_lines = 0 # how many empty lines this fetch has
+            last_non_empty_line = 0
             fetched_rows = r.json()['data']['valueRanges'][0]['values']
             cleaned_rows = []
             for (i, row) in enumerate(fetched_rows):
                 if isinstance(row[0], list):
                     #this is a text with url, feishu will return [{'type':'url', 'text':"https://blabla"}]
                     itemUrl = row[0][0]['text']
+                    last_non_empty_line = starting_line+i
                 elif row[0] != None:
                     itemUrl = row[0]
+                    last_non_empty_line = starting_line+i
                 else:
                     if all(v is None for v in row):
                         empty_lines += 1
                     # if more than 5 empty line, we think it's ending
-                    if empty_lines == 5: 
-                        total_rows = starting_line+i
                     continue
                 new_row = [itemUrl]+row[1:]
                 cleaned_rows.append(new_row)
             read_rows += cleaned_rows
             starting_line += line_per_read+1
+            # if more than 5 empty line, we think it's ending
             if empty_lines >= 5:
                 reading_end = True
-                self.feishu_total_rows = total_rows
+                self.feishu_total_rows = last_non_empty_line
         edited_doc = pd.DataFrame(read_rows)
-        edited_doc.columns = title_cols
+        edited_doc.columns = self.title_cols
         self.read_doc = edited_doc
-        print('[Feishu Syncer Info] read feishu with %d rows' % syncer.feishu_total_rows)
+        print('[Feishu Syncer Info] read feishu with %d rows' % self.feishu_total_rows)
 
     '''
     Load the scraped csv file
     '''
-    def read_local_scraped_CSV(self, fname="final.csv", title_cols=DEFAULT_TITLE_COLS):
+    def read_local_scraped_CSV(self, fname="final.csv"):
         scrapedCSV = pd.read_csv("final.csv")
-        for column_name in title_cols:
+        for column_name in self.title_cols:
             if column_name not in scrapedCSV:
                 scrapedCSV[column_name] = ""
         self.scraped_csv = scrapedCSV
 
-    def compare_Feishu_n_localFile(self, saveResPath='combined.csv',
-                                    startCol='A', stopCol='L', title_cols=DEFAULT_TITLE_COLS):
+    def compare_Feishu_n_localFile(self, saveResPath='combined.json'):
         #Get newly scraped rows that's not in the Feishu doc
         newly_scraped_rows = pd.concat([self.scraped_csv, self.read_doc, self.read_doc])\
                                 .drop_duplicates(subset=['微博链接'], keep=False)
-        newly_scraped_rows = newly_scraped_rows[title_cols]
+        newly_scraped_rows = newly_scraped_rows[self.title_cols]
         print('[Feishu Syncer Info] Newly scraped %d rows' % newly_scraped_rows.shape[0])
 
         #Get valid items from the Feishu doc
         valid_rows_after_edit = self.read_doc.loc[(
-            self.read_doc['是否为有效信息'] != '否') & (self.read_doc['已结束/已删除'] != '是')]
+            self.read_doc['是否为有效信息'] != '否') & (self.read_doc['已过期或已删除'] != '是')]
         
         #Combine old and new data for the server to show
         combinedCSV = pd.concat([valid_rows_after_edit, newly_scraped_rows])
-        combinedCSV = combinedCSV[title_cols]
-        combinedCSV.to_csv(saveResPath, index=False)
-        print('[Feishu Syncer Info] Combined csv with %d lines saved to %s' % (combinedCSV.shape[0], saveResPath))
+        combinedCSV = combinedCSV[self.title_cols]
+        with open(saveResPath, 'w', encoding='utf-8') as file:
+            combinedCSV.to_json(file,  orient='records', force_ascii=False)
+        print('[Feishu Syncer Info] Combined json with %d items saved to %s' % (combinedCSV.shape[0], saveResPath))
 
         #write the newly scraped data to Feishu
         value_to_add = newly_scraped_rows.values.tolist()
         fromRow = self.feishu_total_rows+1
         toRow = fromRow+len(value_to_add)-1
-        insertRange = "%s!%s%d:%s%d" % (self.sheetID, startCol, fromRow, stopCol, toRow)
+        insertRange = "%s!%s%d:%s%d" % (self.sheetID, self.startCol, fromRow, self.stopCol, toRow)
         InsertDataURL = "https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/%s/values_append" % self.sheetToken
         params = {
             "valueRange": {
@@ -134,22 +154,21 @@ class FeishuSyncer(object):
         rjson = r.json()
         print(rjson)
 
-    def startSync(self, local_csv='final.csv', save_local_path='combined.csv', 
-                    feishu_sheet_token=DEFAULT_SHEET_TOKEN, 
-                    feishu_sheet_nth=0, startCol='A', stopCol='L', title_cols=DEFAULT_TITLE_COLS):
+    def startSync(self, local_csv='final.csv', save_local_path='combined.json', 
+                    feishu_sheet_token=DEFAULT_SHEET_TOKEN, feishu_sheet_nth=0):
         self.get_sheet_meta_data(feishu_sheet_token)
-        self.read_sheet_data(feishu_sheet_nth, startCol, stopCol, title_cols)
-        self.read_local_scraped_CSV(local_csv, title_cols)
-        self.compare_Feishu_n_localFile(save_local_path, startCol, stopCol, title_cols)
+        self.read_sheet_data(feishu_sheet_nth)
+        self.read_local_scraped_CSV(local_csv)
+        self.compare_Feishu_n_localFile(save_local_path)
 
 
-if __name__ == "__main__":
-    syncer = FeishuSyncer('', '')
-    syncer.get_sheet_meta_data()
-    syncer.read_sheet_data()
-    
+# if __name__ == "__main__":
+#     syncer = FeishuSyncer()
+#     syncer.get_sheet_meta_data()
+#     syncer.read_sheet_data()
+#     print(syncer.title_cols)
 
-    syncer.read_local_scraped_CSV()
-    print(syncer.scraped_csv.head(3))
+    # syncer.read_local_scraped_CSV()
+    # print(syncer.scraped_csv.head(3))
 
-    syncer.compare_Feishu_n_localFile()
+    # syncer.compare_Feishu_n_localFile()
