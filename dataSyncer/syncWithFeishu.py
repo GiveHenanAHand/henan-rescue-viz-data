@@ -11,7 +11,7 @@ And add new items at the same time
 '''
 CHN_COL_TO_ENG = {
     '微博链接': 'link',
-    '时间': 'time',
+    '时间': 'Time',
     '地址': 'address',
     '经度': 'lng',
     '纬度': 'lat',
@@ -147,9 +147,15 @@ class FeishuSyncer(object):
         #Combine old and new data for the server to show
         combinedCSV = pd.concat([valid_rows_after_edit, newly_scraped_rows])
         combinedCSV = combinedCSV[self.title_cols]
-
+        #We need to convert the key names 
+        #to confirm to the historical json format
+        combinedCSV = combinedCSV.rename(columns=CHN_COL_TO_ENG)
+        combinedCSV = combinedCSV.where(pd.notnull(combinedCSV), None)
+        combined_dict = combinedCSV.to_dict(orient='records')
+        for item in combined_dict:
+            item['location']= {'lng':item['lng'], 'lat':item['lat']}
         with open(saveResPath, 'w', encoding='utf-8') as file:
-            combinedCSV.rename(columns=CHN_COL_TO_ENG).to_json(file,  orient='records', force_ascii=False)
+            json.dump(combined_dict, file, indent=4, ensure_ascii=False)
         print('[Feishu Syncer Info] Combined json with %d items saved to %s' % (combinedCSV.shape[0], saveResPath))
 
         #write the newly scraped data to Feishu
