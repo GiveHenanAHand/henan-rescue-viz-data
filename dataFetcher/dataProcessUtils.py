@@ -189,6 +189,5 @@ def data_export_csv(cache_path, to_fname='final.csv'):
                 urgent = '有效'
                 if u == False:
                     urgent = '无效'
-                print(u, urgent)
                 f_csv.writerow([l, t, addr, location['lng'], location['lat'], p, useless, urgent])
 
