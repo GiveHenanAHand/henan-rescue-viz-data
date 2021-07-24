@@ -18,8 +18,10 @@ CHN_COL_TO_ENG = {
     '微博内容': 'post',
     '紧急': 'urgent',
     '分类': 'category',
-    '已结束已删除': 'already_delete',
+    '已过期或已删除': 'outdated_or_deleted',
     '是否为有效信息': 'valid_info',
+    '审核人': "reviewer",
+    '经纬度已人工矫正': "is_corrected_latlong",
     '勿动_机器分类_有效': 'machine_valid_classification'
 }
 
