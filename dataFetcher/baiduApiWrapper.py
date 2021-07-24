@@ -16,9 +16,12 @@ class BaiduAPIWrapper(object):
         '''
 
         data = np.load(cache_path+".npy", allow_pickle=True)[()]
-        data_ids = data.keys()
+        data_ids = list(data.keys())
         cnt = 0
         for id in tqdm(data_ids):
+            if not 'post' in data[id]:
+                del(data[id])
+                continue
             if not 'address' in data[id]:
                 data[id]['address'] = ''
                 data[id]['location'] = ''

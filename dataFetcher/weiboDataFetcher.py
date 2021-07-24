@@ -30,8 +30,8 @@ class WeiboDataFetcher(object):
 
         cnt = 0
         for i in detail_url:
+            weibo_id = i[-16:]
             try:
-                weibo_id = i[-16:]
                 if weibo_id in self.data:
                     if stop_if_repeat:
                         break
@@ -57,6 +57,7 @@ class WeiboDataFetcher(object):
 
                 cnt += 1
             except Exception:
+                del(self.data[weibo_id])
                 print("weibo fetching error")
 
         print("aquisite %d info" % cnt)
