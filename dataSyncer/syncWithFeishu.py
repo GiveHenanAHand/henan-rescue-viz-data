@@ -9,7 +9,20 @@ A syncer dealing with Feishu sheet
 Trying to sync the edited items with Feishu
 And add new items at the same time
 '''
-DEFAULT_TITLE_COLS = ['微博链接','时间','地址','经度','纬度','微博内容','紧急','分类','已结束/已删除','是否为有效信息','审核人','经纬度已人工矫正']
+CHN_COL_TO_ENG = {
+    '微博链接': 'link',
+    '时间': 'time',
+    '地址': 'address',
+    '经度': 'lng',
+    '纬度': 'lat',
+    '微博内容': 'post',
+    '紧急': 'urgent',
+    '分类': 'category',
+    '已结束已删除': 'already_delete',
+    '是否为有效信息': 'valid_info',
+    '勿动_机器分类_有效': 'machine_valid_classification'
+}
+
 APP_ID = 'YOUR_APP_ID'
 APP_SECRET = 'YOUR_APP_SECRET'
 DEFAULT_SHEET_TOKEN="shtcnh4177SPTo2N8NglZHCirDe"
@@ -134,8 +147,9 @@ class FeishuSyncer(object):
         #Combine old and new data for the server to show
         combinedCSV = pd.concat([valid_rows_after_edit, newly_scraped_rows])
         combinedCSV = combinedCSV[self.title_cols]
+
         with open(saveResPath, 'w', encoding='utf-8') as file:
-            combinedCSV.to_json(file,  orient='records', force_ascii=False)
+            combinedCSV.rename(columns=CHN_COL_TO_ENG).to_json(file,  orient='records', force_ascii=False)
         print('[Feishu Syncer Info] Combined json with %d items saved to %s' % (combinedCSV.shape[0], saveResPath))
 
         #write the newly scraped data to Feishu
@@ -162,13 +176,13 @@ class FeishuSyncer(object):
         self.compare_Feishu_n_localFile(save_local_path)
 
 
-# if __name__ == "__main__":
-#     syncer = FeishuSyncer()
-#     syncer.get_sheet_meta_data()
-#     syncer.read_sheet_data()
+if __name__ == "__main__":
+    syncer = FeishuSyncer('cli_a070f17f87f8d00d', '41O0BHNSZE33JMTYVMP7cgLKPhvRUWAq')
+    syncer.get_sheet_meta_data()
+    syncer.read_sheet_data()
 #     print(syncer.title_cols)
 
-    # syncer.read_local_scraped_CSV()
+    syncer.read_local_scraped_CSV()
     # print(syncer.scraped_csv.head(3))
 
-    # syncer.compare_Feishu_n_localFile()
+    syncer.compare_Feishu_n_localFile()
