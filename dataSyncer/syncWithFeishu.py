@@ -152,7 +152,7 @@ class FeishuSyncer(object):
             self.read_doc['是否为有效信息'] != '否') & (self.read_doc['已过期或已删除'] != '是')]
         #Further validate
         valid_rows_after_edit = valid_rows_after_edit.loc[(
-            valid_rows_after_edit['是否为有效信息'] == '是') | (valid_rows_after_edit['勿动_机器分类_有效'] == '是')]
+            valid_rows_after_edit['是否为有效信息'] == '是') | (valid_rows_after_edit['勿动_机器分类_有效'] != '否')]
         
         #Combine old and new data for the server to show
         combinedCSV = pd.concat([valid_rows_after_edit, newly_scraped_rows])
