@@ -118,6 +118,10 @@ class CustomFeishuySyncer(FeishuSyncer):
 
     def export_to_json(self, saveResPath):
         read_doc = self.read_doc.rename(columns=CHN_COL_TO_ENG)
+        if 'valid_info' in read_doc:
+            read_doc = read_doc.loc[read_doc['valid_info'] != '否']
+        if 'outdated_or_deleted' in read_doc:
+            read_doc = read_doc.loc[read_doc['outdated_or_deleted'] != '是']
         read_doc = read_doc.where(pd.notnull(read_doc), None)
         export_dict = read_doc.to_dict(orient='records')
         for i,item in enumerate(export_dict):
