@@ -7,7 +7,7 @@ import shutil
 import os
 
 parser = argparse.ArgumentParser(description='Scraper for henan flood-related weibo')
-parser.add_argument('--cache', type=str, default='latest_data', help='cache numpy array')
+parser.add_argument('--cache', type=str, default='latest_data.npy', help='cache numpy array')
 parser.add_argument('--json_output', type=str, default='final.json', help='output json file')
 parser.add_argument('--csv_output', type=str, default='final.csv', help='output json file')
 parser.add_argument('--api_key', type=str, default=None, help='baidu API key')
@@ -15,12 +15,10 @@ parser.add_argument('--api_secret', type=str, default=None, help='baidu API secr
 parser.add_argument('--feishu_app_id', type=str, default=None, help='Feishu API key')
 parser.add_argument('--feishu_app_secret', type=str, default=None, help='Feishu API secret')
 
-def backup_if_exist(path, backup_folder='backup'):
-    if not os.path.isdir(backup_folder):
-        os.makedirs(backup_folder)
+def backup_if_exist(prefix):
     now = datetime.datetime.now()
-    if os.path.exists(path+".npy"):
-        shutil.copy(path+".npy", backup_folder+'/'+path + "." + now.strftime('%Y%m%d%H%M%S') + ".old")
+    if os.path.exists(prefix+".npy"):
+        shutil.copy(prefix+".npy", prefix + "." + now.strftime('%Y%m%d%H%M%S') + ".old.npy")
 
 def fetch_n_export(args):
     Weibo_Fetcher = WeiboDataFetcher()
