@@ -49,7 +49,6 @@ class WeiboDataFetcher(object):
                 log_text = data['text']
                 log_text = re.sub('<.*?>', '', log_text)
 
-                print(created_at_time, i, log_text)
                 self.data[weibo_id]['time'] = created_at_time
                 self.data[weibo_id]['link'] = i
                 self.data[weibo_id]['post'] = log_text
@@ -60,6 +59,6 @@ class WeiboDataFetcher(object):
                 del(self.data[weibo_id])
                 print("weibo fetching error")
 
-        print("aquisite %d info" % cnt)
+        print("[WeiboDataFetcher] Aquisite %d info" % cnt)
 
         np.save(cache_path, self.data)

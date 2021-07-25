@@ -5,7 +5,9 @@ import requests
 import pandas as pd
 from requests.api import request
 
-from syncWithFeishu import *
+from .syncWithFeishu import *
+
+CUSTOM_SHEET_TOKEN = "shtcnemn0sOgZ5Y9Cvp027wHWYd"
 
 class CustomFeishuySyncer(FeishuSyncer):
     def __init__(self, APP_id, APP_secret, baidu_ak):
@@ -24,7 +26,7 @@ class CustomFeishuySyncer(FeishuSyncer):
     '''
     百度api, 根据地址获取经纬度
     '''
-    def getLocation2D(loc_text):
+    def getLocation2D(self, loc_text):
         if len(loc_text) == 0:
             return {'lng':0, 'lat':0}
         # api-endpoint
@@ -41,7 +43,7 @@ class CustomFeishuySyncer(FeishuSyncer):
     '''
     向文档写入数据
     '''
-    def updateRange(fromCol, fromRow, toCol, toRow, vals):
+    def updateRange(self, fromCol, fromRow, toCol, toRow, vals):
         #write the newly scraped data to Feishu
         insertRange = "%s!%s%d:%s%d" % (self.sheetID, fromCol, fromRow, toCol, toRow)
         InsertDataURL = "https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/%s/values" % self.sheetToken
@@ -97,10 +99,10 @@ class CustomFeishuySyncer(FeishuSyncer):
                 if cleaned_row[lng_idx] is None and cleaned_row[address_idx] != None:
                     # if the location is empty,
                     # we request for longitude/latitude
-                    loc = getLocation2D(cleaned_row[address_idx])
+                    loc = self.getLocation2D(cleaned_row[address_idx])
                     # and update the feishu sheet
-                    updateRange(lng_col, starting_line+i, lat_col, starting_line+i, [[loc['lng'], loc['lat']]])
-                    print('[Feishu Custom Syncer Info] update loc for row %d' % last_non_empty_line, loc)
+                    self.updateRange(lng_col, starting_line+i, lat_col, starting_line+i, [[loc['lng'], loc['lat']]])
+                    #print('[Feishu Custom Syncer Info] update loc for row %d' % last_non_empty_line, loc)
                     cleaned_row[lng_idx] = loc['lng']
                     cleaned_row[lat_idx] = loc['lat']
                 cleaned_rows.append(cleaned_row)
@@ -115,13 +117,13 @@ class CustomFeishuySyncer(FeishuSyncer):
         self.read_doc = edited_doc
         print('[Feishu Custom Syncer Info] read feishu with %d rows' % self.feishu_total_rows)
 
-
-    def export_to_json(self, saveResPath):
+    def sheet_to_dict(self):
         read_doc = self.read_doc.rename(columns=CHN_COL_TO_ENG)
         if 'valid_info' in read_doc:
             read_doc = read_doc.loc[read_doc['valid_info'] != '否']
         if 'outdated_or_deleted' in read_doc:
             read_doc = read_doc.loc[read_doc['outdated_or_deleted'] != '是']
+        
         read_doc = read_doc.where(pd.notnull(read_doc), None)
         export_dict = read_doc.to_dict(orient='records')
         for i,item in enumerate(export_dict):
@@ -129,12 +131,19 @@ class CustomFeishuySyncer(FeishuSyncer):
             if not self.has_link:
                 # we generate a random
                 item['link'] = 'no_link%s_%s_%d' % (self.sheetToken, self.sheetID, i)
+        return export_dict
 
+    def export_to_json(self, saveResPath):
         with open(saveResPath, 'w', encoding='utf-8') as file:
-            json.dump(export_dict, file, indent=4, ensure_ascii=False)
-        print('[Feishu Custom Syncer Info] Export json with %d items saved to %s' % (read_doc.shape[0], saveResPath))
+            json.dump(self.doc_dict, file, indent=4, ensure_ascii=False)
+        print('[Feishu Custom Syncer Info] Export json with %d items saved to %s' % (len(self.doc_dict), saveResPath))
 
-    def startExport(self, export_path, feishu_sheet_token, feishu_sheet_nth=0):
+    def startExport(self, export_path, feishu_sheet_token=CUSTOM_SHEET_TOKEN):
         self.get_sheet_meta_data(feishu_sheet_token)
-        self.read_custom_sheet_data(feishu_sheet_nth)
+        nsheets = len(self.sheetMetaJson["data"]["sheets"])
+        self.doc_dict = []
+        for i in range(nsheets):
+            self.read_custom_sheet_data(Nth_sheet=i)
+            dict_res = self.sheet_to_dict()
+            self.doc_dict += dict_res
         self.export_to_json(export_path)
