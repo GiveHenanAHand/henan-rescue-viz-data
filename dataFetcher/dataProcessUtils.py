@@ -3,50 +3,11 @@ import re
 import csv
 import json
 import time
-import jieba
 import datetime
 import requests
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
-
-def data_content_filter(cache_path, keywords_path='dict.txt'):
-    data = np.load(cache_path + ".npy", allow_pickle=True)[()]
-    dict_word_calculate = {}
-
-    file = open(keywords_path, 'r', encoding='utf-8')
-
-    lines = file.readlines()
-    for line in lines:
-        name = line.strip().split()[0]
-        number = float(line.strip().split()[1])
-        dict_word_calculate[name] = number
-
-    ID = data.keys()
-
-    for id in ID:
-        if not 'urgent' in data[id]:
-            data[id]['urgent'] = True
-
-        word_list = []
-
-        seg_list = jieba.cut(data[id]['post'], cut_all=False, HMM=True)
-        split_line = " ".join(seg_list).split()
-        # print(split_line)
-        for words in split_line:
-            for word in words:
-                if u'\u4e00' <= word <= u'\u9fff':
-                    word_list.append(words)
-                    break
-
-        result = 1
-        for words in word_list:
-            if dict_word_calculate.get(words) != None:
-                result = result * dict_word_calculate.get(words)
-
-        if result < 1:
-            data[id]['urgent'] = False
-
-    np.save(cache_path, data)
 
 def data_date_valid(cache_path):
     data = np.load(cache_path + ".npy", allow_pickle=True)[()]
@@ -162,31 +123,17 @@ def data_export(cache_path, output_path):
 
 def data_export_csv(cache_path, to_fname='final.csv'):
     data = np.load(cache_path+".npy", allow_pickle=True)[()]
-
-    Address = dict()
-    data_ids = data.keys()
-
-    for data_id in data_ids:
-        v = data[data_id]
-
-        if 'address' in v and "河南" in v['address'] and len(v['address']) != 0:
-            addr = v['address']
-            if not addr in Address:
-                Address[addr] = []
-            Address[addr].append([v['time'], v['link'], v['post'], v['location'], v['404'], v['outdated'], v['urgent']])
-
-    with open(to_fname, 'w', newline='', encoding='utf-8') as f:
-        f_csv = csv.writer(f)
-        f_csv.writerow(['微博链接', '时间', '地址', '经度', '纬度', '微博内容', '已过期或已删除', '勿动_机器分类_有效'])
-        for addr in Address.keys():
-            content = Address[addr]
-            content.sort()
-            for t, l, p, location, r, o, u in content:
-                useless = '否'
-                if r or o:
-                    useless = '是'
-                urgent = '有效'
-                if u == False:
-                    urgent = '无效'
-                f_csv.writerow([l, t, addr, location['lng'], location['lat'], p, useless, urgent])
-
+    df = pd.DataFrame.from_dict(data, orient='index')
+    df = df.loc[df['address'].str.contains("河南")].sort_values(by=['time','link'], ascending=False)
+    df['outdated'] = df['outdated'].map({True: '是', False: '否'})
+    df['urgent'] = df['urgent'].map({True: '有效', False: '无效'})
+    locations = pd.DataFrame(df['location'].to_list())
+    df['lng'] = list(locations['lng'])
+    df['lat'] = list(locations['lat'])
+    df.rename(columns={'time': '时间', 'link': '微博链接', 'address':'地址',
+                    'post':'微博内容', 'lng':'经度', 'lat':'纬度', 
+                    'category':'分类', 'outdated':'已过期或已删除',
+                   'urgent':'勿动_机器分类_有效'}, inplace=True)
+    df = df[['微博链接', '时间', '地址', '经度', '纬度', '微博内容', '分类', '已过期或已删除', '勿动_机器分类_有效']]
+    df.to_csv(to_fname, encoding='utf-8', index=False)
+    print('Fetched data exported to %s' % to_fname)

@@ -7,7 +7,7 @@ import requests
 import numpy as np
 
 class WeiboDataFetcher(object):
-    def fetch_weibo_data(self, cache_path, keyword = "暴雨互助", page=10, stop_if_repeat=True):
+    def fetch_weibo_data(self, cache_path, keyword = "暴雨互助", page=10, stop_if_repeat=False):
         '''
         Acquisite data from weibo
         Keyword : keyword for search
@@ -48,6 +48,7 @@ class WeiboDataFetcher(object):
                 created_at_time = data['created_at']
                 log_text = data['text']
                 log_text = re.sub('<.*?>', '', log_text)
+                print(created_at_time, i, log_text)
 
                 self.data[weibo_id]['time'] = created_at_time
                 self.data[weibo_id]['link'] = i
