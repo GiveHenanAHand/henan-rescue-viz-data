@@ -26,19 +26,26 @@ class CustomFeishuySyncer(FeishuSyncer):
     '''
     百度api, 根据地址获取经纬度
     '''
-    def getLocation2D(self, loc_text):
+    def getLocation2D(self, loc_text, default_prefix='河南省'):
         if len(loc_text) == 0:
             return {'lng':0, 'lat':0}
         # api-endpoint
         URL = "http://api.map.baidu.com/geocoding/v3"
+        address = loc_text
+        if default_prefix not in address:
+            address = default_prefix+address
         # defining a params dict for the parameters to be sent to the API
-        PARAMS = {'address':loc_text, "output": "json", "ak": self.baidu_ak}
-        # sending get request and saving the response as response object
-        r = requests.get(url = URL, params = PARAMS)
-        rjson = r.json()
-        if rjson['status'] == 0:
-            return rjson['result']['location']
-        return {'lng':0, 'lat':0}
+        PARAMS = {'address':address, 
+                  "output": "json", "ak": self.baidu_ak}
+        try:
+            # sending get request and saving the response as response object
+            r = requests.get(url = URL, params = PARAMS)
+            rjson = r.json()
+            if rjson['status'] == 0:
+                return rjson['result']['location']
+            return {'lng':0, 'lat':0}
+        except:
+            return {'lng':0, 'lat':0}
 
     '''
     向文档写入数据
