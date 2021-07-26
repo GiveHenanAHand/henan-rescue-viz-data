@@ -24,7 +24,7 @@ def data_date_valid(cache_path):
 
         delttime = (time.mktime(Today)-time.mktime(Time)) / (24 * 60 * 60)
 
-        if delttime > 3:
+        if delttime > 1:
             data[id]['outdated'] = True
 
     np.save(cache_path, data)
@@ -52,6 +52,7 @@ def data_link_valid(cache_path):
             d = json.loads(d)['status']
         except:
             data[id]['404'] = True
+            data[id]['outdated'] = True
 
     np.save(cache_path, data)
 

@@ -51,5 +51,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     while True:
+        print('start new round of fetching...')
         backup_if_exist(args.cache)
         fetch_n_export(args)

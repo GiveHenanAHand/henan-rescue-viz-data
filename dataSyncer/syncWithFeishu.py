@@ -138,7 +138,7 @@ class FeishuSyncer(object):
         for column_name in self.title_cols:
             if column_name not in scrapedCSV:
                 scrapedCSV[column_name] = ""
-        self.scraped_csv = scrapedCSV
+        self.scraped_csv = scrapedCSV.where(pd.notnull(scrapedCSV), None)
         print('[Feishu Syncer Info] Total scraped %d rows' % self.scraped_csv.shape[0])
 
     def compare_Feishu_n_localFile(self, saveResPath='combined.json'):
@@ -146,6 +146,9 @@ class FeishuSyncer(object):
         newly_scraped_rows = pd.concat([self.scraped_csv, self.read_doc, self.read_doc])\
                                 .drop_duplicates(subset=['微博链接'], keep=False)
         newly_scraped_rows = newly_scraped_rows[self.title_cols]
+        newly_scraped_rows = newly_scraped_rows.where(pd.notnull(newly_scraped_rows), None)
+        newly_scraped_rows = newly_scraped_rows.loc[(
+            newly_scraped_rows['已过期或已删除'] != '是')]
         print('[Feishu Syncer Info] Newly scraped %d rows' % newly_scraped_rows.shape[0])
 
         #Get valid items from the Feishu doc
@@ -174,19 +177,32 @@ class FeishuSyncer(object):
 
         #write the newly scraped data to Feishu
         value_to_add = newly_scraped_rows.values.tolist()
-        fromRow = self.feishu_total_rows+1
-        toRow = fromRow+len(value_to_add)-1
-        insertRange = "%s!%s%d:%s%d" % (self.sheetID, self.startCol, fromRow, self.stopCol, toRow)
-        InsertDataURL = "https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/%s/values_append" % self.sheetToken
-        params = {
-            "valueRange": {
-                "range": insertRange,
-                "values": value_to_add
+        self.update_new_rows(value_to_add)
+        print('[Feishu Syncer Info] Successfully updated Feishu doc')
+
+    '''
+    Update in every 1k row step
+    '''
+    def update_new_rows(self, total_values):
+        row_cnt = len(total_values)
+        for i in range(0, row_cnt, 1000):
+            value_to_add = total_values[i:min(i+50, row_cnt)]
+            fromRow = self.feishu_total_rows+1
+            toRow = fromRow+len(value_to_add)-1
+            insertRange = "%s!%s%d:%s%d" % (self.sheetID, self.startCol, fromRow, self.stopCol, toRow)
+            InsertDataURL = "https://open.feishu.cn/open-apis/sheets/v2/spreadsheets/%s/values" % self.sheetToken
+            params = {
+                "valueRange": {
+                    "range": insertRange,
+                    "values": value_to_add
+                }
             }
-        }
-        r = requests.post(InsertDataURL, headers=self.HEADER, json=params)
-        rjson = r.json()
-        print(rjson)
+            r = requests.put(InsertDataURL, headers=self.HEADER, json=params)
+            rjson = r.json()
+            if 'msg' not in rjson or rjson['msg'] != 'Success':
+                print('[Feishu Syncer Info] write to Feishu sheet failed!')
+                return
+            self.feishu_total_rows += len(value_to_add)
 
     def startSync(self, local_csv='final.csv', save_local_path='combined.json', 
                     feishu_sheet_token=DEFAULT_SHEET_TOKEN, feishu_sheet_nth=0):
