@@ -20,11 +20,11 @@ parser.add_argument('--api_secret', type=str, default=None, help='baidu API secr
 parser.add_argument('--baidu_ak', type=str, default=None, help='baidu maps API key')
 parser.add_argument('--feishu_app_id', type=str, default=None, help='Feishu API key')
 parser.add_argument('--feishu_app_secret', type=str, default=None, help='Feishu API secret')
+parser.add_argument('--backup_count', type=int, default='5', help="the max number of the latest backup cache")
 
-def backup_if_exist(prefix):
-    now = datetime.datetime.now()
+def backup_if_exist(prefix, backup_id):
     if os.path.exists(prefix+".npy"):
-        shutil.copy(prefix+".npy", prefix + "." + now.strftime('%Y%m%d%H%M%S') + ".old.npy")
+        shutil.copy(prefix+".npy", prefix + "." + str(backup_id) + ".old.npy")
 
 def fetch_n_export(args):
     Weibo_Fetcher = WeiboDataFetcher()
@@ -50,7 +50,9 @@ def fetch_n_export(args):
 if __name__ == "__main__":
     args = parser.parse_args()
 
+    backup_id = 0
     while True:
         print('start new round of fetching...')
-        backup_if_exist(args.cache)
+        backup_if_exist(args.cache, backup_id)
+        backup_id = (backup_id + 1) % (args.backup_count)
         fetch_n_export(args)
