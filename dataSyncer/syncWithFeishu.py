@@ -171,6 +171,8 @@ class FeishuSyncer(object):
         combined_dict = combinedCSV.to_dict(orient='records')
         for item in combined_dict:
             item['location']= {'lng':item['lng'], 'lat':item['lat']}
+        combined_dict = [item for item in combined_dict if item['valid_info'] == '是' or
+                         (item['machine_valid_classification'] == '有效' and item['valid_info'] != '否')]
         with open(saveResPath, 'w', encoding='utf-8') as file:
             json.dump(combined_dict, file, indent=4, ensure_ascii=False)
         print('[Feishu Syncer Info] Combined json with %d items saved to %s' % (combinedCSV.shape[0], saveResPath))
